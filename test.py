@@ -1,11 +1,63 @@
 import platform
 import os
 import sys
+import typing
 
 from PyQt6 import QtWidgets, QtGui, QtCore
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QTextCursor
+from PyQt6.QtWidgets import QWidget
 import vlc
+
+
+class TranslationLabel(QtWidgets.QLabel):
+    def __init__(self):
+        super().__init__()
+        self.setMaximumHeight(20)
+        self.setMaximumWidth(200)
+        #self.setStyleSheet("border: 1px solid white; background-color: rgba(0, 0, 0, 200);")
+        self.setStyleSheet("background-color: rgba(0, 0, 0, 200);")
+        self.set_translation_text(" ")
+
+    def set_translation_text(self, s):
+        self.setText(s)
+        
+class SubtitleBrowser(QtWidgets.QTextEdit):
+    def __init__(self):
+        super().__init__()
+        self.setMaximumHeight(40)
+        self.setText("test if the words are shown as separate or not")
+
+        # SETTINGS
+        self.word_adjust_x = -25
+        self.word_adjust_y = -25
+
+    def mouseMoveEvent(self, mouse_event) -> None:
+        """
+        https://stackoverflow.com/questions/69380860/wordundercursor-not-working-as-it-should-word-being-detected-when-not-on-top-of
+        """
+        # if cursor hovering over the subtitlebrowser
+        if self.underMouse():
+            print("under")
+            text_cursor = self.cursorForPosition(mouse_event.pos())
+            text_cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+            word_under_cursor = text_cursor.selectedText()
+            
+            PLAYER.translation_label.set_translation_text(word_under_cursor)
+
+            # relative_x = mouse_event.pos().x()
+            # relative_y = mouse_event.pos().y()
+            # global_pos = self.mapFromGlobal(QtCore.QPoint(0, 0))
+            # word_x = -1*global_pos.x() + relative_x
+            # word_y = -1*global_pos.y() + relative_y
+            # self.translation_label.setGeometry(word_x+self.word_adjust_x, word_y+self.word_adjust_y, 5, 5)
+            # self.translation_label.setText(word_under_cursor)
+            # self.translation_label.adjustSize()
+            # self.translation_label.show()
+
+
+        return super().mouseMoveEvent(mouse_event)
+
 
 class Player(QtWidgets.QMainWindow):
     """A simple Media Player using VLC and Qt
@@ -70,6 +122,15 @@ class Player(QtWidgets.QMainWindow):
         self.vboxlayout.addWidget(self.videoframe)
         self.vboxlayout.addWidget(self.positionslider)
         self.vboxlayout.addLayout(self.hbuttonbox)
+
+
+        ###
+        self.translation_label = TranslationLabel()
+        self.subtitle_browser = SubtitleBrowser()
+        self.vboxlayout.addWidget(self.translation_label)
+        self.vboxlayout.addWidget(self.subtitle_browser)
+
+        ###
 
         self.widget.setLayout(self.vboxlayout)
 
@@ -187,14 +248,12 @@ class Player(QtWidgets.QMainWindow):
             if not self.is_paused:
                 self.stop()
 
-def main():
-    """Entry point for our simple vlc player
-    """
-    app = QtWidgets.QApplication(sys.argv)
-    player = Player()
-    player.show()
-    player.resize(640, 480)
-    sys.exit(app.exec())
 
-if __name__ == "__main__":
-    main()
+
+"""Entry point for our simple vlc player
+"""
+APP = QtWidgets.QApplication(sys.argv)
+PLAYER = Player()
+PLAYER.show()
+PLAYER.resize(640, 480)
+sys.exit(APP.exec())
