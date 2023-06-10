@@ -11,7 +11,6 @@ import pathlib
 import warnings
 
 
-
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, ui_path):
         super(MainWindow, self).__init__() # Call the inherited classes __init__ method
@@ -21,6 +20,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actionAudio.triggered.connect(select_audio)
         self.actionSubtitles.triggered.connect(select_subtitles)
 
+        # link buttons
         self.playButton.pressed.connect(pressed_play_button)
 
 
@@ -57,24 +57,38 @@ def reset_audio():
     reset_progress_bar()
     
 def load_audio():
+    """
+    the 'audio_file' should be set in the STATE before calling this load_audio function
+    """
+
+
     if STATE['audio_file'] is None:
         reset_progress_bar()
     else:
+        # reset
+        audio_file = STATE['audio_file']
+        reset_audio()
+        STATE['audio_file'] = audio_file
+
+        # load the empty mediapalayer and audio file
         player = vlc.MediaPlayer()
-        media = vlc.Media(STATE['audio_file'])
+        media = vlc.Media(audio_file)
+
+        # get length of the audio file
         media.parse_with_options(1, 0)
         while media.get_duration() < 0:
             continue
         player.set_media(media)
 
+        # store the variables in the current state
         STATE['audio_duration'] = media.get_duration()
         STATE['player'] = player
-        STATE['media'] = media
-        
+        STATE['media'] = media        
         print("Audio duration", STATE["audio_duration"])
+        
+        # update the progress bar
         set_progress_bar_maximum()
         update_progress_bar()
-
 
 def pressed_play_button():
     """
@@ -88,6 +102,7 @@ def pressed_play_button():
     # if pressed and audio was already playing.
     current_state = player.get_state()
     
+    # play, reload or pause depending on the active state of the player
     if current_state == vlc.State.Playing:
         pause_audio()
     elif current_state == vlc.State.Ended:
@@ -139,7 +154,7 @@ def set_progress_bar_maximum():
     window.progressBar.setMaximum(STATE["audio_duration"])
 
 def update_progress_bar():
-    window.progressBar.setValue(int(STATE["audio_duration"]))
+    window.progressBar.setValue(int(STATE["active_time"]))
 
 
 def debug():
