@@ -1,0 +1,3 @@
+python3 -m pip install openai-whisper
+# on MacOS using Homebrew (https://brew.sh/)
+brew install ffmpeg
