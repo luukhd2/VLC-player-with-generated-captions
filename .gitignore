@@ -1,6 +1,8 @@
 #
 /output/
 output/
+/whisper_cpp/
+whisper_cpp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
