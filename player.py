@@ -9,16 +9,20 @@ from PyQt6.QtGui import QAction, QTextCursor
 from PyQt6.QtWidgets import QWidget
 import vlc
 
-from subtitles import TranslationLabel, SubtitleBrowser
+from subtitles import TranslationLabel, SubtitleBrowser, LanguageSettingLabel
+from translate import get_languages
 
 
 class Player(QtWidgets.QMainWindow):
     """A simple Media Player using VLC and Qt
     """
 
-    def __init__(self, master=None):
-        QtWidgets.QMainWindow.__init__(self, master)
+    def __init__(self, settings):
+        QtWidgets.QMainWindow.__init__(self)
         self.setWindowTitle("Media Player")
+
+        # store settings dict
+        self.settings = settings
 
         # Create a basic vlc instance
         self.instance = vlc.Instance()
@@ -77,12 +81,13 @@ class Player(QtWidgets.QMainWindow):
         self.vboxlayout.addLayout(self.hbuttonbox)
 
 
-        ###
+        ### Custom: Link the subtitle part of the player
+        self.language_setting_label = LanguageSettingLabel(self.settings['in_lan'], self.settings['out_lan'])
         self.translation_label = TranslationLabel()
-        self.subtitle_browser = SubtitleBrowser(self)
+        self.subtitle_browser = SubtitleBrowser(self, self.settings['in_lan'], self.settings['out_lan'])
+        self.vboxlayout.addWidget(self.language_setting_label)
         self.vboxlayout.addWidget(self.translation_label)
         self.vboxlayout.addWidget(self.subtitle_browser)
-
         ###
 
         self.widget.setLayout(self.vboxlayout)
@@ -91,20 +96,37 @@ class Player(QtWidgets.QMainWindow):
 
         # File menu
         file_menu = menu_bar.addMenu("File")
-
         # Add actions to file menu
         open_action = QAction("Load Video", self)
         close_action = QAction("Close App", self)
         file_menu.addAction(open_action)
         file_menu.addAction(close_action)
-
         open_action.triggered.connect(self.open_file)
         close_action.triggered.connect(sys.exit)
+
+        # add dropdown menus for input and output languages to the menubar
+        language_input_menu = menu_bar.addMenu("InputLanguage")
+        language_output_menu = menu_bar.addMenu("OutputLanguage")
+
+        for lan_abbreviation, lan_full in get_languages().items():
+            lan_string = f"{lan_abbreviation} ({lan_full})"
+            language_input_menu.addAction(lan_string, self.language_input_menu_clicked)
+            language_output_menu.addAction(lan_string, self.language_output_menu_clicked)
 
         self.timer = QtCore.QTimer(self)
         self.timer.setInterval(100)
         self.timer.timeout.connect(self.update_ui)
 
+    def language_input_menu_clicked(self):
+        action = self.sender()
+        self.subtitle_browser.input_language_select(action.text())
+        # example of action.text() = 'bs (bosnian)'
+
+    def language_output_menu_clicked(self):
+        action = self.sender()
+        self.subtitle_browser.output_language_select(action.text())
+        # example of action.text() = 'zh-cn (chinese (simplified))'
+        
     def play_pause(self):
         """Toggle play/pause status
         """
@@ -192,7 +214,7 @@ class Player(QtWidgets.QMainWindow):
         self.positionslider.setValue(media_pos)
 
         # TODO: load subtitles here using the media_pos
-        self.update_subtitles()
+        self.subtitle_browser.update_subtitles(media_pos)
 
         # No need to call this function if nothing is played
         if not self.mediaplayer.is_playing():

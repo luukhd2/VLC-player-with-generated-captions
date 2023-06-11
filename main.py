@@ -11,13 +11,17 @@ import vlc
 
 
 from player import Player
+from settings import SETTINGS
 
 
 if __name__ == "__main__":
     """Entry point for our simple vlc player
     """
     APP = QtWidgets.QApplication(sys.argv)
-    PLAYER = Player()
+
+    PLAYER = Player(SETTINGS)
+    
     PLAYER.show()
+
     PLAYER.resize(640, 480)
     sys.exit(APP.exec())
