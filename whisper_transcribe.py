@@ -4,73 +4,97 @@ import subprocess, sys
 import time
 import traceback
 import threading 
+import io
+import pathlib
 
 
-def get_whisper_string(path_to_audio_file, model="tiny", language="English"):
+def get_whisper_command_str(path_to_audio_file, model, language, model_dir):
     """
-    'af', 'am', 'ar', 'as', 'az', 'ba', 'be', 'bg', 'bn', 'bo', 'br', 'bs', 'ca', 'cs', 'cy', 'da', 'de', 'el',
-    'en', 'es', 'et', 'eu', 'fa', 'fi', 'fo', 'fr', 'gl', 'gu', 'ha', 'haw', 'he', 'hi', 'hr', 'ht', 'hu', 'hy', 'id', 
-    'is', 'it', 'ja', 'jw', 'ka', 'kk', 'km', 'kn', 'ko', 'la', 'lb', 'ln', 'lo', 'lt', 'lv', 'mg', 'mi', 'mk', 'ml', 'mn', 
-    'mr', 'ms', 'mt', 'my', 'ne', 'nl', 'nn', 'no', 'oc', 'pa', 'pl', 'ps', 'pt', 'ro', 'ru', 'sa', 'sd', 'si', 'sk', 'sl', 'sn', 
-    'so', 'sq', 'sr', 'su', 'sv', 'sw', 'ta', 'te', 'tg', 'th', 'tk', 'tl', 'tr', 'tt', 'uk', 'ur', 'uz', 'vi', 'yi', 'yo', 
-    'zh', 'Afrikaans', 'Albanian', 'Amharic', 'Arabic', 'Armenian', 'Assamese', 'Azerbaijani', 'Bashkir', 'Basque', 
-    'Belarusian', 'Bengali', 'Bosnian', 'Breton', 'Bulgarian', 'Burmese', 'Castilian', 'Catalan', 'Chinese',
-      'Croatian', 'Czech', 'Danish', 'Dutch', 'English', 'Estonian', 'Faroese', 'Finnish', 'Flemish', 'French', '
-      Galician', 'Georgian', 'German', 'Greek', 'Gujarati', 'Haitian', 'Haitian Creole', 'Hausa', 'Hawaiian', 'Hebrew', 
-      'Hindi', 'Hungarian', 'Icelandic', 'Indonesian', 'Italian', 'Japanese', 'Javanese', 'Kannada', 'Kazakh', 'Khmer', 'Korean', 
-      'Lao', 'Latin', 'Latvian', 'Letzeburgesch', 'Lingala', 'Lithuanian', 'Luxembourgish', 'Macedonian', 'Malagasy', 'Malay', 'Malayalam', 
-      'Maltese', 'Maori', 'Marathi', 'Moldavian', 'Moldovan', 'Mongolian', 'Myanmar', 'Nepali', 'Norwegian', 'Nynorsk', 'Occitan', 'Panjabi', 
-      'Pashto', 'Persian', 'Polish', 'Portuguese', 'Punjabi', 'Pushto', 'Romanian', 'Russian', 'Sanskrit', 'Serbian', 'Shona', 'Sindhi',
-        'Sinhala', 'Sinhalese', 'Slovak', 'Slovenian', 'Somali', 'Spanish', 'Sundanese', 'Swahili', 'Swedish', 'Tagalog', 'Tajik',
-          'Tamil', 'Tatar', 'Telugu', 'Thai', 'Tibetan', 'Turkish', 'Turkmen', 'Ukrainian', 'Urdu', 'Uzbek', 'Valencian', 'Vietnamese', 
-          'Welsh', 'Yiddish', 'Yoruba'
+    python3 whisper_test.py --model 'tiny' --model_dir ./models --audio_path './a.mp3' --lan "ru"
     """
-    return f"whisper '{path_to_audio_file}' --condition_on_previous_text False --fp16 False --model {model} --model_dir /Users/kcd635/Documents/GitHub/CaptionViewerNew/models/ --output_format srt --task transcribe --language {language}"
+    # -u tells it not to buffer
+    return f"python3 -u ./whisper_terminal.py --model {model} --model_dir {model_dir} --audio_path '{path_to_audio_file}' --lan {language}"
 
 
-class FileModified():
-    def __init__(self, file_path):
-        self.file_path = file_path
-        self.callback = self.file_modified
-        self.modifiedOn = os.path.getmtime(file_path)
-        self.last_line_index = -1
+def parse_whisper_time_string(time_str):
+    """
+    16:07.360 -> <int> 16 mins, <int> 7 secs, <int> 360 ms
+    """
+    hours = 0
+    mins = 0
+    secs = 0
+    ms = 0
 
-    def start(self):
-        while (True):
-            time.sleep(5)
-            modified = os.path.getmtime(self.file_path)
-            if modified != self.modifiedOn:
-                self.modifiedOn = modified
-                if self.callback():
-                    break
+    if time_str.count(":") < 2:
+        mins, rest = time_str.split(":", 1)
+        secs, ms = rest.split(".", 1)
+    else:
+        hours, rest = time_str.split(":", 1) 
+        mins, rest = rest.split(":", 1)
+        secs, ms = rest.split(".", 1)
 
-    def file_modified(self):
-        with open(self.file_path, 'rb') as open_file:
-            for line_index, line in enumerate(open_file):
-                if line_index > self.last_line_index:
-                    STRING_LIST.append(line)
-                else:
-                    pass
-            self.last_line_index = line_index
-            print(len(STRING_LIST), STRING_LIST[-1])
-        return False
-
-def start_file_modifier(file_path):
-    fileModifiedHandler = FileModified(logfile_path)
-    fileModifiedHandler.start()
+    return int(hours), int(mins), int(secs), int(ms)
 
 
-STRING_LIST = list()
-logfile_path = "test.log"
-#audio_path="/Users/kcd635/Documents/GitHub/CaptionViewerNew/Carl Sagan - Pale Blue Dot.mp4"
-audio_path="./a.mp3"
+def times_to_ms(hours, mins, secs, ms):
+    return hours*3600000 + mins*60000 + secs*1000 + ms
 
-modifier_thread = threading.Thread(target=start_file_modifier, args=(logfile_path, ))
-modifier_thread.start()
 
-with open(logfile_path, "ab") as f:
-    your_command = get_whisper_string(audio_path, language='Russian')
-    process = subprocess.Popen(your_command, stdout=subprocess.PIPE, shell=True)
-    for c in iter(lambda: process.stdout.read(1), b""):
-        sys.stdout.buffer.write(c)
-        f.write(c)
+def parse_whisper_terminal_line(line):
+    """
+    input example: <str>
+                  "[00:09.320 --> 00:11.600]   test 123 this is a sentence."
+    """
+    # get text
+    text = line.split(']', 1)[1].strip()
+    
+    # get time segments
+    line = line.strip()
+    time_segment = "".join(line.partition("]")[0:1])
+    time_segment = time_segment.replace("[", "")
+    start_str, end_str = time_segment.split("-->")
+
+    # get times
+    s_h, s_m, s_s, s_ms = parse_whisper_time_string(start_str)
+    e_h, e_m, e_s, e_ms = parse_whisper_time_string(end_str)
+    start_time_ms = times_to_ms(s_h, s_m, s_s, s_ms)
+    end_time_ms = times_to_ms(e_h, e_m, e_s, e_ms)
+
+    return text, start_time_ms, end_time_ms
+
+
+def start_live_transcription(list_with_subtitle_text_and_times,  audio_path, model, language, model_dir):
+    # get the shell command for the whisper_terminal.py script    
+    your_command = get_whisper_command_str(audio_path, model=model, language=language, model_dir=model_dir)
+
+    # start this command in a subprocess
+    proc = subprocess.Popen(your_command, stdout=subprocess.PIPE, shell=True)
+
+    # read the output of the subprocess
+    for line in io.TextIOWrapper(proc.stdout, encoding="utf-8"):  # or another encoding
+        # do something with line if it is a time line
+        if "-->" in line and line.startswith("["):
+            text, start_time, end_time = parse_whisper_terminal_line(line)
+            list_with_subtitle_text_and_times.append((text, start_time, end_time))
+    
+
+if __name__ == "__main__":
+    # showcase how this can be used in a thread
+    GLOBAL_LIST = list(("Starting transcription...", 0, 0))
+    NEW_THREAD = threading.Thread(target=start_live_transcription, args=(GLOBAL_LIST,
+                                                                         pathlib.Path("./Carl Sagan - Pale Blue Dot.mp4"),
+                                                                        "tiny",
+                                                                        "en",
+                                                                        "./models/",)
+                                )
+    NEW_THREAD.start()
+
+    # showcase how the thread transcribes in real time
+    OLD_OUT = ""
+    while True:
+        OUT = GLOBAL_LIST[-1]
+        if OUT == OLD_OUT:
+            continue
+        else:
+            print(OUT)
+            OLD_OUT = OUT
