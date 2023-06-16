@@ -1,25 +1,9 @@
 #!/usr/bin/python
 import os
 import subprocess, sys
-
-def this_works():
-    ## command to run - tcp only ##
-    cmd = "echo 'test'; sleep 10; echo 'test2'"
-    
-    ## run it ##
-    p = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE)
-    import time
-    ## But do not wait till netstat finish, start displaying output immediately ##
-    while True:
-        for x in range(0, 1000):
-            print(x)
-            time.sleep(1)
-        out = p.stderr.read(1)
-        if out == '' and p.poll() != None:
-            break
-        if out != '':
-            sys.stdout.write(out)
-            sys.stdout.flush()
+import time
+import traceback
+import threading 
 
 
 def get_whisper_string(path_to_audio_file, model="tiny", language="English"):
@@ -41,21 +25,52 @@ def get_whisper_string(path_to_audio_file, model="tiny", language="English"):
           'Tamil', 'Tatar', 'Telugu', 'Thai', 'Tibetan', 'Turkish', 'Turkmen', 'Ukrainian', 'Urdu', 'Uzbek', 'Valencian', 'Vietnamese', 
           'Welsh', 'Yiddish', 'Yoruba'
     """
-    return f"whisper '{path_to_audio_file}'  --model {model} --model_dir /Users/kcd635/Documents/GitHub/CaptionViewerNew/models/ --output_format srt --task transcribe --language {language}"
+    return f"whisper '{path_to_audio_file}' --condition_on_previous_text False --fp16 False --model {model} --model_dir /Users/kcd635/Documents/GitHub/CaptionViewerNew/models/ --output_format srt --task transcribe --language {language}"
 
 
 class FileModified():
-    def __init__(self, file_path, callback):
+    def __init__(self, file_path):
         self.file_path = file_path
-        self.callback = callback
+        self.callback = self.file_modified
         self.modifiedOn = os.path.getmtime(file_path)
+        self.last_line_index = -1
+
+    def start(self):
+        while (True):
+            time.sleep(5)
+            modified = os.path.getmtime(self.file_path)
+            if modified != self.modifiedOn:
+                self.modifiedOn = modified
+                if self.callback():
+                    break
+
+    def file_modified(self):
+        with open(self.file_path, 'rb') as open_file:
+            for line_index, line in enumerate(open_file):
+                if line_index > self.last_line_index:
+                    STRING_LIST.append(line)
+                else:
+                    pass
+            self.last_line_index = line_index
+            print(len(STRING_LIST), STRING_LIST[-1])
+        return False
+
+def start_file_modifier(file_path):
+    fileModifiedHandler = FileModified(logfile_path)
+    fileModifiedHandler.start()
 
 
-with open("test.log", "wb") as f:
-    your_command = get_whisper_string("a.mp3", language='Russian')
-    print(your_command)
+STRING_LIST = list()
+logfile_path = "test.log"
+#audio_path="/Users/kcd635/Documents/GitHub/CaptionViewerNew/Carl Sagan - Pale Blue Dot.mp4"
+audio_path="./a.mp3"
+
+modifier_thread = threading.Thread(target=start_file_modifier, args=(logfile_path, ))
+modifier_thread.start()
+
+with open(logfile_path, "ab") as f:
+    your_command = get_whisper_string(audio_path, language='Russian')
     process = subprocess.Popen(your_command, stdout=subprocess.PIPE, shell=True)
     for c in iter(lambda: process.stdout.read(1), b""):
         sys.stdout.buffer.write(c)
         f.write(c)
-    
