@@ -2,6 +2,7 @@ import platform
 import os
 import sys
 import typing
+import pathlib
 
 from PyQt6 import QtWidgets, QtGui, QtCore
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
@@ -9,7 +10,7 @@ from PyQt6.QtGui import QAction, QTextCursor
 from PyQt6.QtWidgets import QWidget
 import vlc
 
-from subtitles import TranslationLabel, SubtitleBrowser, LanguageSettingLabel
+from subtitle_gui import TranslationLabel, SubtitleBrowser, LanguageSettingLabel
 from translate import get_languages
 
 
@@ -101,7 +102,7 @@ class Player(QtWidgets.QMainWindow):
         close_action = QAction("Close App", self)
         file_menu.addAction(open_action)
         file_menu.addAction(close_action)
-        open_action.triggered.connect(self.open_file)
+        open_action.triggered.connect(self.open_audio_file)
         close_action.triggered.connect(sys.exit)
 
         # add dropdown menus for input and output languages to the menubar
@@ -137,7 +138,7 @@ class Player(QtWidgets.QMainWindow):
             self.timer.stop()
         else:
             if self.mediaplayer.play() == -1:
-                self.open_file()
+                self.open_audio_file()
                 return
 
             self.mediaplayer.play()
@@ -151,7 +152,7 @@ class Player(QtWidgets.QMainWindow):
         self.mediaplayer.stop()
         self.playbutton.setText("Play")
 
-    def open_file(self):
+    def open_audio_file(self):
         """Open a media file in a MediaPlayer
         """
 
@@ -172,6 +173,11 @@ class Player(QtWidgets.QMainWindow):
         # Set the title of the track as window title
         self.setWindowTitle(self.media.get_meta(0))
 
+
+        while self.media.get_duration() < 0:
+            continue
+        self.media_duration = self.media.get_duration()
+
         # The media player has to be 'connected' to the QFrame (otherwise the
         # video would be displayed in it's own window). This is platform
         # specific, so we must give the ID of the QFrame (or similar object) to
@@ -183,8 +189,19 @@ class Player(QtWidgets.QMainWindow):
         elif platform.system() == "Darwin": # for MacOS
             self.mediaplayer.set_nsobject(int(self.videoframe.winId()))
 
+        ### Load subtitles
+        audio_file_path = pathlib.Path(filename[0])
+        subtitle_path = audio_file_path.with_suffix(".srt")
+        if os.path.exists(subtitle_path):
+            print("Loading subtitles at", subtitle_path)
+            self.subtitle_browser.load_subtitles(subtitle_path)
+        # subtitles do not yet exist
+        else:
+            print("Automatically creating")
+            self.subtitle_browser.load_subtitles(subtitle_path)
+            
         self.play_pause()
-
+    
     def set_volume(self, volume):
         """Set the volume
         """
@@ -210,11 +227,13 @@ class Player(QtWidgets.QMainWindow):
         # Set the slider's position to its corresponding media position
         # Note that the setValue function only takes values of type int,
         # so we must first convert the corresponding media position.
-        media_pos = int(self.mediaplayer.get_position() * 1000)
+        media_pos = int(self.mediaplayer.get_position()*100)
+
         self.positionslider.setValue(media_pos)
 
         # TODO: load subtitles here using the media_pos
-        self.subtitle_browser.update_subtitles(media_pos)
+        time_in_ms = self.media_duration * self.mediaplayer.get_position()
+        self.subtitle_browser.update_subtitles(time_in_ms)
 
         # No need to call this function if nothing is played
         if not self.mediaplayer.is_playing():

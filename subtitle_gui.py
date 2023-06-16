@@ -7,7 +7,9 @@ from PyQt6 import QtWidgets, QtGui, QtCore
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtGui import QAction, QTextCursor
 from PyQt6.QtWidgets import QWidget
+
 import vlc
+from load_subtitles import load_srt_file, find_text_and_index_at_time
 
 
 class LanguageSettingLabel(QtWidgets.QLabel):
@@ -47,10 +49,12 @@ class SubtitleBrowser(QtWidgets.QTextEdit):
         self.word_adjust_x = -25
         self.word_adjust_y = -25
 
+        # VARS
         self.player = player
         self.input_language = input_language
         self.output_language = output_language
-        
+        self.loaded_subtitles = None
+
     def input_language_select(self, action_text):
         """
         example of action.text() = 'bs (bosnian)'
@@ -83,8 +87,23 @@ class SubtitleBrowser(QtWidgets.QTextEdit):
 
         return super().mouseMoveEvent(mouse_event)
 
+    def load_subtitles(self, pathlib_to_srt_file):
+        """
+        """
+        print("loading subtitles")
+        self.subtitle_index = -1
+        self.loaded_subtitles = load_srt_file(pathlib_to_srt_file)
+        print(self.loaded_subtitles)
 
-
-    def update_subtitles(self, media_pos):
-        print(media_pos)
-
+    def update_subtitles(self, time_in_ms):
+        """
+        media_pos = time in seconds
+        """
+        if self.loaded_subtitles is not None:
+            
+            subtitle_text, subtitle_index = find_text_and_index_at_time(loaded_subtitles=self.loaded_subtitles,
+                                                      time=time_in_ms, start_index=self.subtitle_index)
+            if self.subtitle_index != subtitle_index:
+                self.subtitle_index = subtitle_index
+                self.setText(subtitle_text)
+                self.update()
