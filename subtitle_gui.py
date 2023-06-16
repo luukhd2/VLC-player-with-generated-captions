@@ -54,6 +54,7 @@ class SubtitleBrowser(QtWidgets.QTextEdit):
         self.input_language = input_language
         self.output_language = output_language
         self.loaded_subtitles = None
+        self.subtitle_index = -1
 
     def input_language_select(self, action_text):
         """
@@ -93,7 +94,6 @@ class SubtitleBrowser(QtWidgets.QTextEdit):
         print("loading subtitles")
         self.subtitle_index = -1
         self.loaded_subtitles = load_srt_file(pathlib_to_srt_file)
-        print(self.loaded_subtitles)
 
     def update_subtitles(self, time_in_ms):
         """
@@ -103,7 +103,13 @@ class SubtitleBrowser(QtWidgets.QTextEdit):
             
             subtitle_text, subtitle_index = find_text_and_index_at_time(loaded_subtitles=self.loaded_subtitles,
                                                       time=time_in_ms, start_index=self.subtitle_index)
-            if self.subtitle_index != subtitle_index:
+            # no subtitles were found. Either due to not existing (transcription still going) or not existing at this timepoint
+            if subtitle_text is None and subtitle_index is None:
+                self.subtitle_index = -1 # restart looking cause it hasnt been found from the starting point used
+                self.setText("")
+                self.update()
+            # set the subtitles found
+            elif self.subtitle_index != subtitle_index:
                 self.subtitle_index = subtitle_index
                 self.setText(subtitle_text)
                 self.update()

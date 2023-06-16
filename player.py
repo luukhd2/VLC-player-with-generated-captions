@@ -3,6 +3,7 @@ import os
 import sys
 import typing
 import pathlib
+import threading
 
 from PyQt6 import QtWidgets, QtGui, QtCore
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
@@ -12,7 +13,7 @@ import vlc
 
 from subtitle_gui import TranslationLabel, SubtitleBrowser, LanguageSettingLabel
 from translate import get_languages
-
+from whisper_transcribe import start_live_transcription
 
 class Player(QtWidgets.QMainWindow):
     """A simple Media Player using VLC and Qt
@@ -194,12 +195,22 @@ class Player(QtWidgets.QMainWindow):
         subtitle_path = audio_file_path.with_suffix(".srt")
         if os.path.exists(subtitle_path):
             print("Loading subtitles at", subtitle_path)
+            self.subtitle_browser.loaded_subtitles = list()
             self.subtitle_browser.load_subtitles(subtitle_path)
         # subtitles do not yet exist
         else:
-            print("Automatically creating")
-            self.subtitle_browser.load_subtitles(subtitle_path)
-            
+            print("Automatically transcribing subtitles")
+            # create the list of subtitles
+            self.subtitle_browser.loaded_subtitles = list()
+            self.transcription_thread = threading.Thread(target=start_live_transcription,
+                                                         args=(self.subtitle_browser.loaded_subtitles,
+                                                                         audio_file_path,
+                                                                        self.settings['model'],
+                                                                        self.subtitle_browser.input_language,
+                                                                        self.settings['model_dir'])
+                                                        )
+            self.transcription_thread.start()
+
         self.play_pause()
     
     def set_volume(self, volume):
@@ -229,11 +240,12 @@ class Player(QtWidgets.QMainWindow):
         # so we must first convert the corresponding media position.
         media_pos = int(self.mediaplayer.get_position()*100)
 
-        self.positionslider.setValue(media_pos)
+        self.positionslider.setValue(media_pos*10)
 
         # TODO: load subtitles here using the media_pos
         time_in_ms = self.media_duration * self.mediaplayer.get_position()
         self.subtitle_browser.update_subtitles(time_in_ms)
+
 
         # No need to call this function if nothing is played
         if not self.mediaplayer.is_playing():

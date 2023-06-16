@@ -60,7 +60,7 @@ def parse_whisper_terminal_line(line):
     start_time_ms = times_to_ms(s_h, s_m, s_s, s_ms)
     end_time_ms = times_to_ms(e_h, e_m, e_s, e_ms)
 
-    return text, start_time_ms, end_time_ms
+    return start_time_ms, end_time_ms, text
 
 
 def start_live_transcription(list_with_subtitle_text_and_times,  audio_path, model, language, model_dir):
@@ -74,8 +74,8 @@ def start_live_transcription(list_with_subtitle_text_and_times,  audio_path, mod
     for line in io.TextIOWrapper(proc.stdout, encoding="utf-8"):  # or another encoding
         # do something with line if it is a time line
         if "-->" in line and line.startswith("["):
-            text, start_time, end_time = parse_whisper_terminal_line(line)
-            list_with_subtitle_text_and_times.append((text, start_time, end_time))
+            start_time, end_time, text = parse_whisper_terminal_line(line)
+            list_with_subtitle_text_and_times.append((start_time, end_time, text))
     
 
 if __name__ == "__main__":
