@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QWidget
 
 import vlc
 from load_subtitles import load_srt_file, find_text_and_index_at_time
-
+from translate import translate_text, get_translator
 
 class LanguageSettingLabel(QtWidgets.QLabel):
     def __init__(self, in_lan, out_lan):
@@ -29,10 +29,18 @@ class TranslationLabel(QtWidgets.QLabel):
         self.setMaximumWidth(200)
         #self.setStyleSheet("border: 1px solid white; background-color: rgba(0, 0, 0, 200);")
         self.setStyleSheet("background-color: rgba(0, 0, 0, 200);")
-        self.set_translation_text(" ")
+        self.reset_translation_text()
+        self.translator = get_translator()
 
-    def set_translation_text(self, s):
-        self.setText(s)
+    def reset_translation_text(self):
+        self.setText(" ")
+
+    def set_translation_text(self, s, in_lan, out_lan):
+        translation = translate_text(self.translator, text=s, src=in_lan, dest=out_lan)
+        if translation is None:
+            return
+        self.setText(f"{s} --> {translation}")
+
 
 class SubtitleBrowser(QtWidgets.QTextEdit):
     def __init__(self, player, input_language, output_language):
@@ -55,7 +63,7 @@ class SubtitleBrowser(QtWidgets.QTextEdit):
         self.output_language = output_language
         self.loaded_subtitles = None
         self.subtitle_index = -1
-
+        
     def input_language_select(self, action_text):
         """
         example of action.text() = 'bs (bosnian)'
@@ -83,7 +91,7 @@ class SubtitleBrowser(QtWidgets.QTextEdit):
             text_cursor.select(QTextCursor.SelectionType.WordUnderCursor)
             word_under_cursor = text_cursor.selectedText()
             
-            self.player.translation_label.set_translation_text(word_under_cursor)
+            self.player.translation_label.set_translation_text(word_under_cursor, self.input_language, self.output_language)
 
 
         return super().mouseMoveEvent(mouse_event)
