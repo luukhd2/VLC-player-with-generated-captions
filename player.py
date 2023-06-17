@@ -65,7 +65,7 @@ class Player(QtWidgets.QMainWindow):
         self.transcription_progress_bar = QtWidgets.QProgressBar(self)
         opacity_effect=QtWidgets.QGraphicsOpacityEffect(self) # create opacity effect to make the trans progress bar less noticable.
         opacity_effect.setOpacity(0.4) #0 to 1 will cause the fade effect to kick in
-        self.transcription_progress_bar.setValue(40)
+        self.transcription_progress_bar.setValue(0)
         self.transcription_progress_bar.setMaximum(100)
         self.transcription_progress_bar.setGraphicsEffect(opacity_effect)
         self.transcription_progress_bar.setDisabled(True)
@@ -218,7 +218,9 @@ class Player(QtWidgets.QMainWindow):
             # create the list of subtitles
             self.start_new_transcription_thread()
 
+        self.update_ui()
         self.play_pause()
+        self.resizeEvent(None)
 
     def start_new_transcription_thread(self):
         # stop old thread if it exists
@@ -226,6 +228,11 @@ class Player(QtWidgets.QMainWindow):
             self.transcription_thread.stop()
         except Exception as exception:
             print(exception)
+        
+        try:
+            print(self.audio_file_path)
+        except AttributeError:
+            return 
         
         # reset the loaded subtitles
         self.subtitle_browser.loaded_subtitles = list()
