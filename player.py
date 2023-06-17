@@ -54,12 +54,19 @@ class Player(QtWidgets.QMainWindow):
         self.videoframe.setPalette(self.palette)
         self.videoframe.setAutoFillBackground(True)
 
+        # slider window for audio playing progress
         self.positionslider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal, self)
         self.positionslider.setToolTip("Position")
         self.positionslider.setMaximum(1000)
         self.positionslider.sliderMoved.connect(self.set_position)
         self.positionslider.sliderPressed.connect(self.set_position)
 
+        # transcription progress bar. User can not interact
+        self.transcription_progress_bar = QtWidgets.QProgressBar(self)
+        self.transcription_progress_bar.setValue(0)
+        self.transcription_progress_bar.setMaximum(100)
+        self.transcription_progress_bar.setDisabled(True)
+		
         self.hbuttonbox = QtWidgets.QHBoxLayout()
         self.playbutton = QtWidgets.QPushButton("Play")
         self.hbuttonbox.addWidget(self.playbutton)
@@ -90,6 +97,7 @@ class Player(QtWidgets.QMainWindow):
         self.vboxlayout.addWidget(self.language_setting_label)
         self.vboxlayout.addWidget(self.translation_label)
         self.vboxlayout.addWidget(self.subtitle_browser)
+        self.vboxlayout.addWidget(self.transcription_progress_bar)
         ###
 
         self.widget.setLayout(self.vboxlayout)
@@ -109,7 +117,6 @@ class Player(QtWidgets.QMainWindow):
         # add dropdown menus for input and output languages to the menubar
         language_input_menu = menu_bar.addMenu("InputLanguage")
         language_output_menu = menu_bar.addMenu("OutputLanguage")
-
         for lan_abbreviation, lan_full in get_languages().items():
             lan_string = f"{lan_abbreviation} ({lan_full})"
             language_input_menu.addAction(lan_string, self.language_input_menu_clicked)
@@ -122,7 +129,8 @@ class Player(QtWidgets.QMainWindow):
     def language_input_menu_clicked(self):
         action = self.sender()
         self.subtitle_browser.input_language_select(action.text())
-        # example of action.text() = 'bs (bosnian)'
+        # input changed so transcription changed
+        self.start_new_transcription_thread()
 
     def language_output_menu_clicked(self):
         action = self.sender()
@@ -192,6 +200,7 @@ class Player(QtWidgets.QMainWindow):
 
         ### Load subtitles
         audio_file_path = pathlib.Path(filename[0])
+        self.audio_file_path = audio_file_path
         subtitle_path = audio_file_path.with_suffix(".srt")
         if os.path.exists(subtitle_path):
             print("Loading subtitles at", subtitle_path)
@@ -201,18 +210,29 @@ class Player(QtWidgets.QMainWindow):
         else:
             print("Automatically transcribing subtitles")
             # create the list of subtitles
-            self.subtitle_browser.loaded_subtitles = list()
-            self.transcription_thread = threading.Thread(target=start_live_transcription,
-                                                         args=(self.subtitle_browser.loaded_subtitles,
-                                                                         audio_file_path,
-                                                                        self.settings['model'],
-                                                                        self.subtitle_browser.input_language,
-                                                                        self.settings['model_dir'])
-                                                        )
-            self.transcription_thread.start()
+            self.start_new_transcription_thread()
 
         self.play_pause()
-    
+
+    def start_new_transcription_thread(self):
+        # stop old thread if it exists
+        try:
+            self.transcription_thread.stop()
+        except Exception as exception:
+            print(exception)
+        
+        # reset the loaded subtitles
+        self.subtitle_browser.loaded_subtitles = list()
+        self.transcription_progress_bar.setValue(0)
+        # start a new thread
+        self.transcription_thread = threading.Thread(target=start_live_transcription,
+                                                        args=(  self.subtitle_browser.loaded_subtitles,
+                                                                self.audio_file_path,
+                                                                self.settings['model'],
+                                                                self.subtitle_browser.input_language,
+                                                                self.settings['model_dir']))
+        self.transcription_thread.start()
+        
     def set_volume(self, volume):
         """Set the volume
         """
@@ -242,10 +262,19 @@ class Player(QtWidgets.QMainWindow):
 
         self.positionslider.setValue(media_pos*10)
 
-        # TODO: load subtitles here using the media_pos
-        time_in_ms = self.media_duration * self.mediaplayer.get_position()
-        self.subtitle_browser.update_subtitles(time_in_ms)
-
+        try:
+            # add subtitles
+            time_in_ms = self.media_duration * self.mediaplayer.get_position()
+            self.subtitle_browser.update_subtitles(time_in_ms)
+            # update transcription progress bar
+            if len(self.subtitle_browser.loaded_subtitles) > 0:
+                last_caption = self.subtitle_browser.loaded_subtitles[-1]
+                last_time = last_caption[1]
+                if self.media_duration > 0:
+                    relative_transcription_progress = round((last_time / self.media_duration)*100)
+                    self.transcription_progress_bar.setValue(relative_transcription_progress)
+        except AttributeError as error:
+            print("AttributeError", error)
 
         # No need to call this function if nothing is played
         if not self.mediaplayer.is_playing():
