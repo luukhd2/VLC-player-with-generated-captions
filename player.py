@@ -156,11 +156,18 @@ class Player(QtWidgets.QMainWindow):
                 self.open_audio_file()
                 return
 
+            # wait for the mediaplayer to actually play
             self.mediaplayer.play()
+            while self.mediaplayer.get_state() != vlc.State.Playing:
+                continue
+            
             self.playbutton.setText("Pause")
             self.timer.start()
             self.is_paused = False
-
+            self.videoframe.resize(1,1)
+            while self.videoframe.size().width() == 1:
+                self.resize_1_percent()
+ 
     def stop(self):
         """Stop player
         """
@@ -218,9 +225,14 @@ class Player(QtWidgets.QMainWindow):
             # create the list of subtitles
             self.start_new_transcription_thread()
 
-        self.update_ui()
-        self.play_pause()
-        self.resizeEvent(None)
+
+    def resize_1_percent(self):
+        current_size = self.size()
+        new_width = int(current_size.width() * 1.01)
+        new_height = int(current_size.height() * 1.01)
+        self.resize(new_width, new_height)
+        self.resize(current_size.width(), current_size.height())
+
 
     def start_new_transcription_thread(self):
         # stop old thread if it exists
