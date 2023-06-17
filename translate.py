@@ -67,6 +67,45 @@ def translate_word_list(translator, word_list, src, dest, use_guaranteed=False):
 
     return translate_dict
 
+
+def start_live_translation(loaded_subtitles, translation_dict, input_language, output_language,
+                           combine_n_sentences=5):
+    """
+    combine_n_sentences: more sentences = less time to wait for googletrans.
+                         downside is that long sentences may cause the api to return none
+    """
+    furthest_index = -1
+    translator = get_translator()
+    sentence_input = ""
+    number_of_combined_sentences = 0
+    while True:
+        try:
+            for index, (start_time, end_time, sentence) in enumerate(loaded_subtitles):
+                # if never seen this sentence before
+                if index > furthest_index and len(sentence) > 0:
+                    furthest_index = index
+                    sentence_input = f"{sentence_input} {sentence}"
+                    number_of_combined_sentences += 1
+                    
+                    if number_of_combined_sentences >= combine_n_sentences:
+                        # get the words
+                        word_list = sentence_input.split()
+                        sentence_translate_dict = translate_word_list(translator=translator, word_list=word_list,
+                                                            src=input_language, dest=output_language, 
+                                                            use_guaranteed=True)
+                        # combine new sentences after this
+                        sentence_input = ""
+                        number_of_combined_sentences = 0
+                        
+                        # add words to translation dict
+                        if sentence_translate_dict is not None:
+                            for word_key, word_val in sentence_translate_dict.items():
+                                translation_dict[word_key] = word_val 
+
+        except Exception as error:
+            print(error)
+
+
 if __name__ == "__main__":
     print(googletrans.LANGUAGES)
     print("\n")

@@ -23,23 +23,29 @@ class LanguageSettingLabel(QtWidgets.QLabel):
         self.setText(f"{in_lan} -> {out_lan}")
 
 class TranslationLabel(QtWidgets.QLabel):
-    def __init__(self):
+    def __init__(self, player):
         super().__init__()
         self.setMaximumHeight(20)
         self.setMaximumWidth(200)
         #self.setStyleSheet("border: 1px solid white; background-color: rgba(0, 0, 0, 200);")
         self.setStyleSheet("background-color: rgba(0, 0, 0, 200);")
         self.reset_translation_text()
+        self.player = player 
         self.translator = get_translator()
-
+        
     def reset_translation_text(self):
-        self.setText(" ")
+        self.setText("")
 
     def set_translation_text(self, s, in_lan, out_lan):
-        translation = translate_text(self.translator, text=s, src=in_lan, dest=out_lan)
+        try:
+            translation = self.player.subtitle_browser.translation_dict[s]
+        except Exception as exception:
+            print(exception)
+            translation = translate_text(self.translator, text=s, src=in_lan, dest=out_lan)
+        
         if translation is None:
             return
-        self.setText(f"{s} --> {translation}")
+        self.setText(f"{s} = {translation}")
 
 
 class SubtitleBrowser(QtWidgets.QTextEdit):
@@ -51,7 +57,7 @@ class SubtitleBrowser(QtWidgets.QTextEdit):
         super().__init__()
         self.setReadOnly(True)
         self.setMaximumHeight(60)
-        self.setText("test 123 test 123")
+        self.setText("Welcome, please select an audio file...")
 
         # SETTINGS
         self.word_adjust_x = -25

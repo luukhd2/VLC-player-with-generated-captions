@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import QWidget
 import vlc
 
 from subtitle_gui import TranslationLabel, SubtitleBrowser, LanguageSettingLabel
-from translate import get_languages
+from translate import get_languages, start_live_translation
 from whisper_transcribe import start_live_transcription
 
 class Player(QtWidgets.QMainWindow):
@@ -63,8 +63,11 @@ class Player(QtWidgets.QMainWindow):
 
         # transcription progress bar. User can not interact
         self.transcription_progress_bar = QtWidgets.QProgressBar(self)
-        self.transcription_progress_bar.setValue(0)
+        opacity_effect=QtWidgets.QGraphicsOpacityEffect(self) # create opacity effect to make the trans progress bar less noticable.
+        opacity_effect.setOpacity(0.4) #0 to 1 will cause the fade effect to kick in
+        self.transcription_progress_bar.setValue(40)
         self.transcription_progress_bar.setMaximum(100)
+        self.transcription_progress_bar.setGraphicsEffect(opacity_effect)
         self.transcription_progress_bar.setDisabled(True)
 		
         self.hbuttonbox = QtWidgets.QHBoxLayout()
@@ -92,7 +95,7 @@ class Player(QtWidgets.QMainWindow):
 
         ### Custom: Link the subtitle part of the player
         self.language_setting_label = LanguageSettingLabel(self.settings['in_lan'], self.settings['out_lan'])
-        self.translation_label = TranslationLabel()
+        self.translation_label = TranslationLabel(self)
         self.subtitle_browser = SubtitleBrowser(self, self.settings['in_lan'], self.settings['out_lan'])
         self.vboxlayout.addWidget(self.language_setting_label)
         self.vboxlayout.addWidget(self.translation_label)
@@ -134,8 +137,11 @@ class Player(QtWidgets.QMainWindow):
 
     def language_output_menu_clicked(self):
         action = self.sender()
-        self.subtitle_browser.output_language_select(action.text())
         # example of action.text() = 'zh-cn (chinese (simplified))'
+        self.subtitle_browser.output_language_select(action.text())
+
+        # new output language, start new translations
+        self.start_new_translation_thread()
         
     def play_pause(self):
         """Toggle play/pause status
@@ -231,8 +237,27 @@ class Player(QtWidgets.QMainWindow):
                                                                 self.settings['model'],
                                                                 self.subtitle_browser.input_language,
                                                                 self.settings['model_dir']))
+        # start new TRANSLATE thread (before transcribe to prevent crash)
+        self.start_new_translation_thread()
+        # start transcription thread
         self.transcription_thread.start()
         
+
+    def start_new_translation_thread(self):
+        try:
+            self.translation_thread.stop()
+        except Exception as exception:
+            print(exception)
+
+        # start a translation thread
+        self.subtitle_browser.translation_dict = dict()
+        self.translation_thread = threading.Thread(target=start_live_translation, 
+                                                   args=(self.subtitle_browser.loaded_subtitles,
+                                                         self.subtitle_browser.translation_dict,
+                                                         self.subtitle_browser.input_language,
+                                                        self.subtitle_browser.output_language))
+        self.translation_thread.start()
+
     def set_volume(self, volume):
         """Set the volume
         """
