@@ -6,5 +6,6 @@ SETTINGS = {
     "out_lan" : "en",
     "model_dir": "./models/",
     #"model":"tiny",
-    "model":"small"
+    "model":"small",
+    "font_size":15,
 }

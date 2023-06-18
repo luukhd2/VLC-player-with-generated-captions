@@ -34,6 +34,8 @@ class Player(QtWidgets.QMainWindow):
         # Create an empty vlc media player
         self.mediaplayer = self.instance.media_player_new()
 
+        self.text_font = QtGui.QFont('Times', self.settings['font_size'])
+
         self.create_ui()
         self.is_paused = False
 
@@ -95,8 +97,11 @@ class Player(QtWidgets.QMainWindow):
 
         ### Custom: Link the subtitle part of the player
         self.language_setting_label = LanguageSettingLabel(self.settings['in_lan'], self.settings['out_lan'])
+        self.language_setting_label.setFont(self.text_font)
         self.translation_label = TranslationLabel(self)
+        self.translation_label.setFont(self.text_font)
         self.subtitle_browser = SubtitleBrowser(self, self.settings['in_lan'], self.settings['out_lan'])
+        self.subtitle_browser.setFont(self.text_font)
         self.vboxlayout.addWidget(self.language_setting_label)
         self.vboxlayout.addWidget(self.translation_label)
         self.vboxlayout.addWidget(self.subtitle_browser)
@@ -180,8 +185,9 @@ class Player(QtWidgets.QMainWindow):
 
         dialog_txt = "Choose Media File"
         filename = QtWidgets.QFileDialog.getOpenFileName(self, dialog_txt, os.path.expanduser('~'))
-        if not filename:
+        if not filename or not os.path.exists(filename[0]):
             return
+        print(filename)
 
         # getOpenFileName returns a tuple, so use only the actual file name
         self.media = self.instance.media_new(filename[0])
