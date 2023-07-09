@@ -9,7 +9,6 @@ from PyQt6.QtGui import QAction, QTextCursor
 from PyQt6.QtWidgets import QWidget
 import vlc
 
-
 from player import Player
 from settings import SETTINGS
 

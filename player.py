@@ -39,6 +39,7 @@ class Player(QtWidgets.QMainWindow):
         self.create_ui()
         self.is_paused = False
 
+    
     def create_ui(self):
         """Set up the user interface, signals & slots
         """
@@ -147,7 +148,28 @@ class Player(QtWidgets.QMainWindow):
 
         # new output language, start new translations
         self.start_new_translation_thread()
-        
+
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key.Key_BracketLeft:
+            time_in_ms = self.media_duration * self.mediaplayer.get_position()
+            new_time = time_in_ms - self.settings['time_change_ms']
+            self.set_new_audio_position(new_time_ms=new_time)
+            
+        elif event.key() == QtCore.Qt.Key.Key_BracketRight:
+            time_in_ms = self.media_duration * self.mediaplayer.get_position()
+            new_time = time_in_ms + self.settings['time_change_ms']
+            self.set_new_audio_position(new_time_ms=new_time)
+
+    def set_new_audio_position(self, new_time_ms):
+        """
+        """
+        new_pos = new_time_ms / self.media_duration
+        if new_pos > 1:
+            new_pos = 1
+        if new_pos < 0:
+            new_pos = 0
+        self.mediaplayer.set_position(new_pos)
+
     def play_pause(self):
         """Toggle play/pause status
         """
@@ -245,7 +267,7 @@ class Player(QtWidgets.QMainWindow):
         try:
             self.transcription_thread.stop()
         except Exception as exception:
-            print(exception)
+            print("start_new_transcription_thread:", exception)
         
         try:
             print(self.audio_file_path)
@@ -272,7 +294,7 @@ class Player(QtWidgets.QMainWindow):
         try:
             self.translation_thread.stop()
         except Exception as exception:
-            print(exception)
+            print("start_new_translation_thread: ", exception)
 
         # start a translation thread
         self.subtitle_browser.translation_dict = dict()
@@ -324,7 +346,7 @@ class Player(QtWidgets.QMainWindow):
                     relative_transcription_progress = round((last_time / self.media_duration)*100)
                     self.transcription_progress_bar.setValue(relative_transcription_progress)
         except AttributeError as error:
-            print("AttributeError", error)
+            print("AttributeError, update UI: ", error)
 
         # No need to call this function if nothing is played
         if not self.mediaplayer.is_playing():

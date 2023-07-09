@@ -2,6 +2,8 @@ import platform
 import os
 import sys
 import typing
+import httpcore 
+
 
 from PyQt6 import QtWidgets, QtGui, QtCore
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
@@ -32,20 +34,47 @@ class TranslationLabel(QtWidgets.QLabel):
         self.reset_translation_text()
         self.player = player 
         self.translator = get_translator()
+        self.saved_words = set()
         
     def reset_translation_text(self):
         self.setText("")
 
     def set_translation_text(self, s, in_lan, out_lan):
         try:
+            if len(self.s) < 1:
+                return
             translation = self.player.subtitle_browser.translation_dict[s]
         except Exception as exception:
-            print(exception)
-            translation = translate_text(self.translator, text=s, src=in_lan, dest=out_lan)
-        
+            print("Set trans text", exception)
+            try:
+                translation = translate_text(self.translator, text=s, src=in_lan, dest=out_lan)
+            except Exception as different_error:
+                print("\tSet trans text different: ", different_error)
+                translation = None 
+                
         if translation is None:
             return
-        self.setText(f"{s} = {translation}")
+        self.s = s
+        self.translation = translation
+        self.setText(f"{self.s} = {self.translation}")
+
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            try:
+                if self.player.audio_file_path is not None:
+                    original_audio = self.player.audio_file_path
+                else:
+                    return
+            except Exception as e:
+                print("mouse event except", e)
+                return
+        
+        save_file = original_audio.with_name(f"{original_audio.name}_words").with_suffix(".txt")
+        if self.s not in self.saved_words:
+            self.saved_words.add(self.s)
+            with open(save_file, 'a') as open_save_file:
+
+                open_save_file.write(f"{self.s},{self.translation}\n")
 
 
 class SubtitleBrowser(QtWidgets.QTextEdit):
@@ -97,7 +126,8 @@ class SubtitleBrowser(QtWidgets.QTextEdit):
             text_cursor.select(QTextCursor.SelectionType.WordUnderCursor)
             word_under_cursor = text_cursor.selectedText()
             
-            self.player.translation_label.set_translation_text(word_under_cursor, self.input_language, self.output_language)
+            self.player.translation_label.set_translation_text(word_under_cursor, self.input_language,
+                                                               self.output_language)
 
 
         return super().mouseMoveEvent(mouse_event)

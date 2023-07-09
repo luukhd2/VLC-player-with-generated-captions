@@ -8,4 +8,6 @@ SETTINGS = {
     #"model":"tiny",
     "model":"small",
     "font_size":15,
+    "save_file":True,
+    "time_change_ms":1000,
 }
