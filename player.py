@@ -9,6 +9,8 @@ from PyQt6 import QtWidgets, QtGui, QtCore
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtGui import QAction, QTextCursor
 from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QLabel, QPushButton, QWidget, QSizePolicy
+
 import vlc
 
 from subtitle_gui import TranslationLabel, SubtitleBrowser, LanguageSettingLabel
@@ -63,6 +65,8 @@ class Player(QtWidgets.QMainWindow):
         self.positionslider.setMaximum(1000)
         self.positionslider.sliderMoved.connect(self.set_position)
         self.positionslider.sliderPressed.connect(self.set_position)
+        self.slider_label = QtWidgets.QLabel()
+        self.slider_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         # transcription progress bar. User can not interact
         self.transcription_progress_bar = QtWidgets.QProgressBar(self)
@@ -82,7 +86,6 @@ class Player(QtWidgets.QMainWindow):
         self.hbuttonbox.addWidget(self.stopbutton)
         self.stopbutton.clicked.connect(self.stop)
 
-        self.hbuttonbox.addStretch(1)
         self.volumeslider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal, self)
         self.volumeslider.setMaximum(100)
         self.volumeslider.setValue(self.mediaplayer.audio_get_volume())
@@ -90,11 +93,21 @@ class Player(QtWidgets.QMainWindow):
         self.hbuttonbox.addWidget(self.volumeslider)
         self.volumeslider.valueChanged.connect(self.set_volume)
 
+        
+        self.slider_layout = QtWidgets.QHBoxLayout()
+        self.slider_layout.setSpacing(10)
         self.vboxlayout = QtWidgets.QVBoxLayout()
+        self.videoframe.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.vboxlayout.addWidget(self.videoframe)
-        self.vboxlayout.addWidget(self.positionslider)
-        self.vboxlayout.addLayout(self.hbuttonbox)
+        
+        self.slider_layout.addWidget(self.positionslider)
+        self.positionslider.setStyleSheet("QSlider::handle { width: 10px; height: 1px;}")
 
+
+        self.slider_layout.addWidget(self.slider_label)
+        self.vboxlayout.addLayout(self.hbuttonbox)
+        self.vboxlayout.addLayout(self.slider_layout)
+        self.vboxlayout.setSpacing(10)
 
         ### Custom: Link the subtitle part of the player
         self.language_setting_label = LanguageSettingLabel(self.settings['in_lan'], self.settings['out_lan'])
@@ -333,10 +346,11 @@ class Player(QtWidgets.QMainWindow):
         media_pos = int(self.mediaplayer.get_position()*100)
 
         self.positionslider.setValue(media_pos*10)
-
         try:
             # add subtitles
             time_in_ms = self.media_duration * self.mediaplayer.get_position()
+            elapsed_time = QtCore.QTime(0, 0).addSecs(int(time_in_ms/1000))
+            self.slider_label.setText(elapsed_time.toString("hh:mm:ss"))
             self.subtitle_browser.update_subtitles(time_in_ms)
             # update transcription progress bar
             if len(self.subtitle_browser.loaded_subtitles) > 0:
