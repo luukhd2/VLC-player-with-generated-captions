@@ -1,4 +1,4 @@
-# CaptionViewerNew
+# VLC player with generated captions
 
 A python .mp4 player that automatically transcribes subtitles and translation for these subtitles while watching a video.
 ```
