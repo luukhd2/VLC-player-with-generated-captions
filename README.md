@@ -1,10 +1,11 @@
 # VLC player with generated captions
 
-A python .mp4 player that automatically transcribes subtitles and translation for these subtitles while watching a video.
+A python .mp4 player that automatically transcribes subtitles and translations for these subtitles while watching a video.
 
 ![alt text](./showcase.png)
 
-Uses whisper to transcribe and googletrans to translate. Uses python-vlc to create the player. Supports 100+ languages (both as input and translation target).
+Uses whisper to transcribe, googletrans to translate, python-vlc to create the player.
+Supports 100+ languages (both as input and translation target).
 
 I personally use it to practice languages after downloading the .mp4 of a show I like. Hope you enjoy!
 
