@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import QWidget
 from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QLabel, QPushButton, QWidget, QSizePolicy
 
 import vlc
+import whisper
 
 from subtitle_gui import TranslationLabel, SubtitleBrowser, LanguageSettingLabel
 from translate import get_languages, start_live_translation
@@ -39,6 +40,14 @@ class Player(QtWidgets.QMainWindow):
         self.text_font = QtGui.QFont('Times', self.settings['font_size'])
 
         self.create_ui()
+
+        # check if model is downloaded, else download it
+        model_path = pathlib.Path(self.settings['model_dir']) / self.settings['model']
+        while not model_path.exists():
+            print("Downloading model")
+            whisper.load_model(self.settings['model'], download_root=self.settings['model_dir'])
+            print("Model downloaded")
+
         self.is_paused = False
 
     
@@ -290,6 +299,7 @@ class Player(QtWidgets.QMainWindow):
         # reset the loaded subtitles
         self.subtitle_browser.loaded_subtitles = list()
         self.transcription_progress_bar.setValue(0)
+
         # start a new thread
         self.transcription_thread = threading.Thread(target=start_live_transcription,
                                                         args=(  self.subtitle_browser.loaded_subtitles,

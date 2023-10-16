@@ -1,13 +1,5 @@
 python3 -m pip install openai-whisper
 # on MacOS using Homebrew (https://brew.sh/)
 brew install ffmpeg
-
-cd whisper_cpp
-git clone https://github.com/ggerganov/whisper.cpp
-cd whisper.cpp
-
-bash ./models/download-ggml-model.sh base
-make
-
-fsdf
-python3 -m pip install --upgrade python-vlc # fixed bug where the video would only be full size after manual resize
+# fixed bug where the video would only be full size after manual resize
+python3 -m pip install --upgrade python-vlc 
