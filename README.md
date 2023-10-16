@@ -7,7 +7,9 @@ A python .mp4 player that automatically transcribes subtitles and translations f
 Uses whisper to transcribe, googletrans to translate, python-vlc to create the player.
 Supports 100+ languages (both as input and translation target).
 
-I personally use it to practice languages after downloading the .mp4 of a show I like. Hope you enjoy!
+The transcription quality of whisper is close to perfect, however, it struggles with load music in the background.
+I personally use it to practice languages after downloading the .mp4 of a show I like. This way you can easily learn new words and immediately get the translation in your native language (when hovering over the word of interest).
+ope you enjoy!
 
 Requirements:
 You must have ffmpeg installed!
