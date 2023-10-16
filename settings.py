@@ -2,8 +2,8 @@
 """
 
 SETTINGS = {
-    "in_lan" : "da",
-    "out_lan" : "en",
+    "in_lan" : "en",
+    "out_lan" : "ar",
     "model_dir": "./models/",
     #"model":"tiny",
     "model":"small",

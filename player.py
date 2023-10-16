@@ -43,6 +43,8 @@ class Player(QtWidgets.QMainWindow):
 
         # check if model is downloaded, else download it
         model_path = pathlib.Path(self.settings['model_dir']) / self.settings['model']
+        # set extension to .pt
+        model_path = model_path.with_suffix(".pt")
         while not model_path.exists():
             print("Downloading model")
             whisper.load_model(self.settings['model'], download_root=self.settings['model_dir'])
