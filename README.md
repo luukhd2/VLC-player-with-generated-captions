@@ -1,10 +1,6 @@
 # VLC player with generated captions
 
 A python .mp4 player that automatically transcribes subtitles and translation for these subtitles while watching a video.
-```
-# run
-python3 main.py
-```
 
 ![alt text](./showcase.png)
 
@@ -23,4 +19,9 @@ python3 -m pip install --upgrade python-vlc
 python3 -m pip install PyQt6
 # googletrans version 4.0.0-rc.1
 python3 -m pip install googletrans
+```
+
+```
+# get GUI with
+python3 main.py
 ```
