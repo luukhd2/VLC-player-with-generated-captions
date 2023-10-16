@@ -1,6 +1,10 @@
 # CaptionViewerNew
 
 A python .mp4 player that automatically transcribes subtitles and translation for these subtitles while watching a video.
+Run with:
+```
+Python3 main.py
+```
 ![alt text](./showcase.png)
 
 Uses whisper to transcribe and googletrans to translate. Uses python-vlc to create the player. Supports 100+ languages (both as input and translation target).
